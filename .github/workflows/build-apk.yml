@@ -1,0 +1,44 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Repoyu Kopyala
+      uses: actions/checkout@v3
+
+    - name: Node.js Kurulumu
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Capacitor ve Cordova Altyapısını Hazırla
+      run: |
+        npm install -g @capacitor/cli @capacitor/core
+        npx @capacitor/cli init TaksiAsistan com.taksimetre.app --web-dir .
+        npm install @capacitor/android
+        npx cap add android
+
+    - name: Java (JDK 17) Kurulumu
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Android APK Derle (Debug)
+      run: |
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: APK Dosyasını Kaydet ve İndirilebilir Yap
+      uses: actions/upload-artifact@v3
+      with:
+        name: taksimetre-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        

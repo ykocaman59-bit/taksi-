@@ -1,6 +1,6 @@
 {
-  "appId": "com.esnaf.defteri",
-  "appName": "Dijital Esnaf Defteri",
+  "appId": "com.taksimetre.app",
+  "appName": "Taksimetre Hesaplayıcı",
   "webDir": "www",
   "bundledWebRuntime": false
 }

@@ -3,24 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Taksimetre</title>
+    <title>Akıllı Taksimetre & Hak Koruma</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; margin: 0; padding: 20px; }
-        .meter-box { background: #222; border: 4px solid #f1c40f; border-radius: 15px; padding: 20px; max-width: 400px; margin: auto; box-shadow: 0 0 20px rgba(241, 196, 15, 0.5); }
-        h1 { color: #f1c40f; font-size: 24px; }
+        .meter-box { background: #222; border: 4px solid #f1c40f; border-radius: 15px; padding: 20px; max-width: 400px; margin: auto; box-shadow: 0 0 20px rgba(241, 196, 15, 0.5); position: relative; }
+        h1 { color: #f1c40f; font-size: 24px; margin-bottom: 5px; }
+        .subtitle { font-size: 12px; color: #888; margin-bottom: 15px; }
         .screen { background: #000; color: #0f0; font-family: monospace; font-size: 36px; padding: 15px; border-radius: 8px; margin: 15px 0; border: 2px solid #333; }
         .label { font-size: 14px; color: #aaa; }
-        button { background: #e74c3c; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
+        button { background: #e74c3c; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
         button.start { background: #2ecc71; }
+        button.history-btn { background: #3498db; }
+        
+        .top-buttons { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .top-buttons button { width: 48%; margin: 0; font-size: 13px; padding: 6px; }
+
+        /* Modallar */
+        .modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); overflow-y: auto; }
+        .modal-content { background-color: #222; margin: 10% auto; padding: 20px; border: 2px solid #f1c40f; width: 85%; max-width: 350px; border-radius: 10px; text-align: left; }
+        .modal-content h3 { color: #f1c40f; margin-top: 0; text-align: center; }
+        .modal-content label { font-size: 13px; color: #ccc; display: block; margin-top: 8px; }
+        .modal-content input { width: 100%; padding: 8px; margin-top: 3px; background: #111; border: 1px solid #444; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        .close-btn { background: #7f8c8d; margin-top: 10px; }
+
+        /* Geçmiş Yolculuk Listesi */
+        .history-item { background: #1a1a1a; border: 1px solid #444; padding: 10px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; text-align: left; }
+        .history-item:hover { border-color: #f1c40f; }
+        .history-date { font-size: 12px; color: #f1c40f; font-weight: bold; }
+        .history-details { font-size: 13px; color: #ddd; margin-top: 4px; }
     </style>
 </head>
 <body>
 
     <div class="meter-box">
-        <h1>TAKSİMETRE</h1>
+        <div class="top-buttons">
+            <button class="history-btn" onclick="openHistoryModal()">📋 Geçmiş Yolculuklar</button>
+            <button class="settings-btn" onclick="openSettingsModal()" style="background:#333; color:#f1c40f; border:1px solid #f1c40f;">⚙️ Ayarlar</button>
+        </div>
+
+        <h1>İSTANBUL TAKSİ</h1>
+        <div class="subtitle">Tüketici Hak Koruma Asistanı</div>
         
         <div class="label">TOPLAM ÜCRET</div>
-        <div class="screen" id="totalPrice">50.00 ₺</div>
+        <div class="screen" id="totalPrice">0.00 ₺</div>
 
         <div class="label">MESAFE</div>
         <div id="distance" style="font-size: 20px; margin: 10px 0;">0.00 km</div>
@@ -28,17 +53,85 @@
         <button id="toggleBtn" class="start" onclick="toggleMeter()">BAŞLAT</button>
     </div>
 
+    <!-- TARİFE AYARLARI MODALI -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Tarife Güncelle</h3>
+            <label>Açılış Ücreti (₺):</label>
+            <input type="number" id="inputOpening" step="0.01">
+            
+            <label>KM Başına Ücret (₺):</label>
+            <input type="number" id="inputKmRate" step="0.01">
+            
+            <label>İndi-Bindi Ücreti (₺):</label>
+            <input type="number" id="inputMinFee" step="0.01">
+
+            <button onclick="saveTariff()" style="background: #2ecc71;">Kaydet</button>
+            <button class="close-btn" onclick="closeSettingsModal()">İptal</button>
+        </div>
+    </div>
+
+    <!-- GEÇMİŞ YOLCULUKLAR MODALI -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <h3>Geçmiş Yolculuklar</h3>
+            <div id="historyList" style="max-height: 250px; overflow-y: auto;">
+                <p style="text-align:center; color:#777; font-size:13px;">Henüz kayıtlı yolculuk yok.</p>
+            </div>
+            <button class="close-btn" onclick="closeHistoryModal()">Kapat</button>
+        </div>
+    </div>
+
+    <!-- TEKİL YOLCULUK DETAY RAPORU MODALI -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #3498db;">Yolculuk Kanıt Raporu</h3>
+            <div id="detailContent" style="font-size: 13px; line-height: 1.6; color: #ddd;"></div>
+            <button class="close-btn" onclick="closeDetailModal()">Geri Dön</button>
+        </div>
+    </div>
+
     <script>
+        // --- TARİFE DEĞİŞKENLERİ ---
+        let openingFee = parseFloat(localStorage.getItem('openingFee')) || 71.94;
+        let kmRate = parseFloat(localStorage.getItem('kmRate')) || 47.92;
+        let minFee = parseFloat(localStorage.getItem('minFee')) || 230.00;
+
         let isRunning = false;
         let watchId = null;
         let totalKm = 0;
         let lastCoords = null;
+        let tripStartTime = null;
 
-        const openingFee = 50.00; // Açılış Ücreti
-        const kmRate = 25.00;     // KM Başına Ücret
+        // Ayarlar Modal İşlemleri
+        function openSettingsModal() {
+            document.getElementById('inputOpening').value = openingFee;
+            document.getElementById('inputKmRate').value = kmRate;
+            document.getElementById('inputMinFee').value = minFee;
+            document.getElementById('settingsModal').style.display = "block";
+        }
+        function closeSettingsModal() { document.getElementById('settingsModal').style.display = "none"; }
+        function saveTariff() {
+            openingFee = parseFloat(document.getElementById('inputOpening').value) || 0;
+            kmRate = parseFloat(document.getElementById('inputKmRate').value) || 0;
+            minFee = parseFloat(document.getElementById('inputMinFee').value) || 0;
+            localStorage.setItem('openingFee', openingFee);
+            localStorage.setItem('kmRate', kmRate);
+            localStorage.setItem('minFee', minFee);
+            alert("Tarife güncellendi!");
+            closeSettingsModal();
+        }
+
+        // Geçmiş Yolculuklar Modal İşlemleri
+        function openHistoryModal() {
+            renderHistoryList();
+            document.getElementById('historyModal').style.display = "block";
+        }
+        function closeHistoryModal() { document.getElementById('historyModal').style.display = "none"; }
+        function closeDetailModal() { document.getElementById('detailModal').style.display = "none"; }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Dünya yarıçapı (km)
+            const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -56,10 +149,12 @@
                     return;
                 }
                 isRunning = true;
-                btn.innerText = "DURDUR / BİTİR";
+                btn.innerText = "YOLCULUĞU BİTİR";
                 btn.className = "";
                 totalKm = 0;
                 lastCoords = null;
+                tripStartTime = new Date(); // Başlangıç zamanını kaydet
+                document.getElementById('totalPrice').innerText = openingFee.toFixed(2) + " ₺";
 
                 watchId = navigator.geolocation.watchPosition(successPosition, errorPosition, {
                     enableHighAccuracy: true,
@@ -67,38 +162,94 @@
                     timeout: 5000
                 });
             } else {
+                // Yolculuk Bitişi ve Kayıt İşlemi
                 isRunning = false;
                 navigator.geolocation.clearWatch(watchId);
                 btn.innerText = "BAŞLAT";
                 btn.className = "start";
+
+                let calculatedPrice = openingFee + (totalKm * kmRate);
+                let finalPrice = calculatedPrice < minFee ? minFee : calculatedPrice;
+
+                // O anki geçerli tarifeyi ve detayları bir nesneye (object) paketle
+                const tripData = {
+                    id: Date.now(),
+                    dateFormatted: tripStartTime.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + " " + tripStartTime.toLocaleDateString('tr-TR', { weekday: 'long' }),
+                    timeRange: tripStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " - " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    openingUsed: openingFee,
+                    kmRateUsed: kmRate,
+                    minFeeUsed: minFee,
+                    distance: totalKm.toFixed(2),
+                    totalAmount: finalPrice.toFixed(2)
+                };
+
+                // LocalStorage'a geçmiş yolculukları ekle
+                let history = JSON.parse(localStorage.getItem('tripHistory')) || [];
+                history.unshift(tripData); // En yeni yolculuğu en üste ekle
+                localStorage.setItem('tripHistory', JSON.stringify(history));
+
+                alert("Yolculuk başarıyla kaydedildi! Yetkiliye göstermek için Geçmiş Yolculuklar menüsüne bakabilirsiniz.");
             }
         }
 
         function successPosition(position) {
-            const currentCoords = {
-                lat: position.coords.latitude,
-                lon: position.coords.longitude
-            };
-
+            const currentCoords = { lat: position.coords.latitude, lon: position.coords.longitude };
             if (lastCoords) {
                 const distance = calculateDistance(lastCoords.lat, lastCoords.lon, currentCoords.lat, currentCoords.lon);
-                if (distance > 0.002) { // 2 metreden küçük hareketleri gürültü olarak yoksay
+                if (distance > 0.002) {
                     totalKm += distance;
                     lastCoords = currentCoords;
                 }
             } else {
                 lastCoords = currentCoords;
             }
-
-            let currentPrice = openingFee + (totalKm * kmRate);
-            document.getElementById('totalPrice').innerText = currentPrice.toFixed(2) + " ₺";
+            let calculatedPrice = openingFee + (totalKm * kmRate);
+            let finalPrice = calculatedPrice < minFee ? minFee : calculatedPrice;
+            document.getElementById('totalPrice').innerText = finalPrice.toFixed(2) + " ₺";
             document.getElementById('distance').innerText = totalKm.toFixed(2) + " km";
         }
 
-        function errorPosition(error) {
-            console.error("Konum alınamadı: " + error.message);
+        function errorPosition(error) { console.error("Konum hatası: " + error.message); }
+
+        // Geçmiş Listesini Ekrana Basma
+        function renderHistoryList() {
+            const listContainer = document.getElementById('historyList');
+            let history = JSON.parse(localStorage.getItem('tripHistory')) || [];
+            
+            if (history.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Henüz kayıtlı yolculuk yok.</p>';
+                return;
+            }
+
+            listContainer.innerHTML = "";
+            history.forEach(trip => {
+                let item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div class="history-date">${trip.dateFormatted} (${trip.timeRange})</div>
+                    <div class="history-details">Mesafe: <b>${trip.distance} km</b> | Tutar: <b style="color:#2ecc71;">${trip.totalAmount} ₺</b></div>
+                `;
+                item.onclick = () => showTripDetail(trip);
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Tekil Yolculuk Detay Penceresi (Yetkiliye Gösterme Ekranı)
+        function showTripDetail(trip) {
+            const detailContent = document.getElementById('detailContent');
+            detailContent.innerHTML = `
+                <p><b>Tarih & Gün:</b> ${trip.dateFormatted}</p>
+                <p><b>Saat Aralığı:</b> ${trip.timeRange}</p>
+                <hr style="border-color:#444;">
+                <p><b>O Anki İndi-Bindi Ücreti:</b> ${trip.minFeeUsed} ₺</p>
+                <p><b>O Anki Açılış Ücreti:</b> ${trip.openingUsed} ₺</p>
+                <p><b>O Anki KM Ücreti:</b> ${trip.kmRateUsed} ₺</p>
+                <hr style="border-color:#444;">
+                <p><b>Gidilen Mesafe:</b> <span style="color:#f1c40f; font-weight:bold;">${trip.distance} km</span></p>
+                <p><b>Uygulama Hesaplanan Tutar:</b> <span style="color:#2ecc71; font-weight:bold; font-size:16px;">${trip.totalAmount} ₺</span></p>
+            `;
+            document.getElementById('detailModal').style.display = "block";
         }
     </script>
 </body>
 </html>
-

@@ -38,11 +38,15 @@
         .modal-content input { width: 100%; padding: 8px; margin-top: 3px; background: #111; border: 1px solid #444; color: #fff; border-radius: 5px; box-sizing: border-box; }
         .close-btn { background: #7f8c8d; margin-top: 10px; }
 
-        /* Geçmiş Yolculuk Listesi */
-        .history-item { background: #1a1a1a; border: 1px solid #444; padding: 10px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; text-align: left; }
+        /* Geçmiş Yolculuk Listesi ve Sil Butonu Düzeni */
+        .history-item { background: #1a1a1a; border: 1px solid #444; padding: 10px; margin-bottom: 8px; border-radius: 6px; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+        .history-info { cursor: pointer; flex-grow: 1; }
         .history-item:hover { border-color: #f1c40f; }
-        .history-date { font-size: 12px; color: #f1c40f; font-weight: bold; }
-        .history-details { font-size: 12px; color: #ddd; margin-top: 4px; }
+        .history-date { font-size: 11px; color: #f1c40f; font-weight: bold; }
+        .history-details { font-size: 11px; color: #ddd; margin-top: 4px; }
+        .delete-btn { background: #c0392b; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; margin-left: 8px; width: auto; }
+        .delete-btn:hover { background: #e74c3c; }
+
         .status-text { font-size: 12px; color: #3498db; margin-top: 5px; min-height: 15px; }
         
         .receipt-line { display: flex; justify-content: space-between; font-size: 13px; border-bottom: 1px dashed #444; padding: 4px 0; color: #ccc; }
@@ -58,7 +62,7 @@
         </div>
 
         <h1>İSTANBUL TAKSİ</h1>
-        <div class="subtitle">Adil Hak Koruma Asistanı</div>
+        <div class="subtitle">Adil Hak Koruma Asistanı<br><span style="color:#2ecc71; font-size:10px;">(Gerçek GPS Modu Aktif)</span></div>
         
         <div class="label">TOPLAM ÜCRET</div>
         <div class="screen" id="totalPrice">0.00 ₺</div>
@@ -69,7 +73,7 @@
             <div class="receipt-line"><span>Gidilen Mesafe:</span> <b id="distance">0.00 km</b></div>
         </div>
 
-        <div class="status-text" id="statusText">GPS Sinyali Bekleniyor...</div>
+        <div class="status-text" id="statusText">Başlat tuşuna basarak GPS'i aktifleştirin</div>
 
         <button id="toggleBtn" class="start" onclick="toggleMeter()">BAŞLAT</button>
     </div>
@@ -115,7 +119,7 @@
     <script>
         // --- TARİFE DEĞİŞKENLERİ ---
         let openingFee = parseFloat(localStorage.getItem('openingFee')) || 71.94;
-        let kmRate = parseFloat(localStorage.getItem('kmRate')) || 71.94; // İstediğin güncel değer
+        let kmRate = parseFloat(localStorage.getItem('kmRate')) || 71.94; 
         let minFee = parseFloat(localStorage.getItem('minFee')) || 230.00;
 
         let isRunning = false;
@@ -160,9 +164,9 @@
         function closeHistoryModal() { document.getElementById('historyModal').style.display = "none"; }
         function closeDetailModal() { document.getElementById('detailModal').style.display = "none"; }
 
-        // İki GPS koordinatı arasındaki mesafeyi metre cinsinden hesaplayan formül (Haversine)
+        // Haversine formülü ile iki GPS koordinatı arası mesafe (metre)
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Dünya'nın yarıçapı (metre)
+            const R = 6371e3; 
             const φ1 = lat1 * Math.PI / 180;
             const φ2 = lat2 * Math.PI / 180;
             const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -172,8 +176,7 @@
                       Math.cos(φ1) * Math.cos(φ2) *
                       Math.sin(Δλ/2) * Math.sin(Δλ/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-            return R * c; // Metre cinsinden mesafe
+            return R * c; 
         }
 
         async function getAddressFromCoords(lat, lon) {
@@ -194,7 +197,7 @@
         function toggleMeter() {
             const btn = document.getElementById('toggleBtn');
             if (!isRunning) {
-                // --- BAŞLAT ---
+                // --- BAŞLAT (GERÇEK GPS) ---
                 if (!navigator.geolocation) {
                     alert("Tarayıcınız GPS konum desteğine sahip değil!");
                     return;
@@ -207,19 +210,17 @@
                 tripStartTime = new Date();
                 lastLat = null;
                 lastLon = null;
-                startAddressText = "Konum alınıyor...";
+                startAddressText = "Konum bekleniyor...";
 
-                document.getElementById('statusText').innerText = "GPS uydularına bağlanılıyor...";
+                document.getElementById('statusText').innerText = "GPS uydularına bağlanılıyor, lütfen bekleyin...";
                 document.getElementById('totalPrice').innerText = openingFee.toFixed(2) + " ₺";
                 document.getElementById('distance').innerText = "0.00 km";
 
-                // Gerçek GPS Takibi Başlatılıyor
                 watchId = navigator.geolocation.watchPosition(async (position) => {
                     const currentLat = position.coords.latitude;
                     const currentLon = position.coords.longitude;
                     const accuracy = position.coords.accuracy;
 
-                    // Eğer ilk konumsa başlangıç adresi olarak kaydet
                     if (lastLat === null || lastLon === null) {
                         lastLat = currentLat;
                         lastLon = currentLon;
@@ -228,15 +229,14 @@
                         return;
                     }
 
-                    // Hassasiyet 30 metreden kötüse geçersiz say (yanıltıcı zıplamaları önlemek için)
-                    if (accuracy > 30) return;
+                    // GPS sapmalarını engellemek için 40 metreden kötü hassasiyetleri süz
+                    if (accuracy > 40) return;
 
-                    // İki nokta arası mesafeyi hesapla (metre)
                     let distanceMeters = calculateDistance(lastLat, lastLon, currentLat, currentLon);
 
-                    // 3 metreden küçük oynamaları gürültü kabul edip yoksay
-                    if (distanceMeters > 3) {
-                        totalKm += (distanceMeters / 1000); // KM'ye çevirip ekle
+                    // 5 metreden küçük hareketleri gürültü sayıp atla
+                    if (distanceMeters > 5) {
+                        totalKm += (distanceMeters / 1000); 
                         lastLat = currentLat;
                         lastLon = currentLon;
 
@@ -248,12 +248,16 @@
                     }
 
                 }, (error) => {
-                    document.getElementById('statusText').innerText = "GPS Hatası: Lütfen konum iznini açın.";
+                    let errMessage = "GPS Hatası: ";
+                    if (error.code === 1) errMessage += "Konum izni reddedildi.";
+                    else if (error.code === 2) errMessage += "Konum alınamıyor (Uydu sinyali yok).";
+                    else if (error.code === 3) errMessage += "Zaman aşımı.";
+                    document.getElementById('statusText').innerText = errMessage;
                     console.error(error);
                 }, {
                     enableHighAccuracy: true,
-                    maximumAge: 1000,
-                    timeout: 10000
+                    maximumAge: 0,
+                    timeout: 15000
                 });
 
             } else {
@@ -268,7 +272,6 @@
                 btn.className = "start";
                 document.getElementById('statusText').innerText = "Yolculuk Tamamlandı ve Kaydedildi!";
 
-                // Bitiş adresini al
                 if (lastLat !== null && lastLon !== null) {
                     getAddressFromCoords(lastLat, lastLon).then(addr => {
                         endAddressText = addr;
@@ -281,7 +284,7 @@
             }
         }
 
-        async function saveTripToHistory() {
+        function saveTripToHistory() {
             let calculatedPrice = openingFee + (totalKm * kmRate);
             let finalPrice = calculatedPrice < minFee ? minFee : calculatedPrice;
 
@@ -302,7 +305,7 @@
             history.unshift(tripData);
             localStorage.setItem('tripHistory', JSON.stringify(history));
 
-            alert("Yolculuk başarıyla kaydedildi ve raporlandı!");
+            alert("Yolculuk başarıyla kaydedildi!");
         }
 
         function renderHistoryList() {
@@ -319,16 +322,27 @@
                 let item = document.createElement('div');
                 item.className = 'history-item';
                 item.innerHTML = `
-                    <div class="history-date">${trip.dateFormatted} (${trip.timeRange})</div>
-                    <div class="history-details">
-                        📍 <b>Kalkış:</b> ${trip.startAddress}<br>
-                        🏁 <b>Varış:</b> ${trip.endAddress}<br>
-                        💰 <b>Tutar:</b> <span style="color:#2ecc71;">${trip.totalAmount} ₺</span> (${trip.distance} km)
+                    <div class="history-info" onclick='showTripDetail(${JSON.stringify(trip)})'>
+                        <div class="history-date">${trip.dateFormatted} (${trip.timeRange})</div>
+                        <div class="history-details">
+                            📍 <b>Kalkış:</b> ${trip.startAddress}<br>
+                            🏁 <b>Varış:</b> ${trip.endAddress}<br>
+                            💰 <b>Tutar:</b> <span style="color:#2ecc71;">${trip.totalAmount} ₺</span> (${trip.distance} km)
+                        </div>
                     </div>
+                    <button class="delete-btn" onclick="deleteTrip(${trip.id})">Sil</button>
                 `;
-                item.onclick = () => showTripDetail(trip);
                 listContainer.appendChild(item);
             });
+        }
+
+        function deleteTrip(id) {
+            if (confirm("Bu yolculuk kaydını silmek istediğinize emin misiniz?")) {
+                let history = JSON.parse(localStorage.getItem('tripHistory')) || [];
+                history = history.filter(trip => trip.id !== id);
+                localStorage.setItem('tripHistory', JSON.stringify(history));
+                renderHistoryList();
+            }
         }
 
         function showTripDetail(trip) {

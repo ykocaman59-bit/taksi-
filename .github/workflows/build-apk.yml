@@ -30,8 +30,9 @@ jobs:
           "bundledWebRuntime": false
         }' > capacitor.config.json
 
-        # Android platformunu ekleyelim ve web dosyalarını kopyalayalım
+        # Android platformunu ekleyelim ve ayarları güncelleyelim (Eksik dosyaları tamamlar)
         npx cap add android
+        npx cap update android
         npx cap copy android
 
     - name: Java (JDK 17) Kurulumu

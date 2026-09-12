@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Depoyu Kopyala
@@ -19,10 +19,14 @@ jobs:
 
     - name: Projeyi Hazırla ve Logoyu Entegre Et
       run: |
+        mkdir -p www
+        if [ -f "index.html" ]; then
+          cp index.html www/index.html
+        fi
+
         npm install
         npx cap add android || true
         
-        # Eğer icon.png varsa Capacitor assets ile logoyu otomatik uygula
         if [ -f "icon.png" ]; then
           npm install -g @capacitor/assets
           npx @capacitor/assets generate --android || true
@@ -38,7 +42,7 @@ jobs:
       run: |
         STRING_FILE="android/app/src/main/res/values/strings.xml"
         if [ -f "$STRING_FILE" ]; then
-          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Dijital Esnaf Defteri<\/string>/g' "$STRING_FILE"
+          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Taksimetre Hesaplayici<\/string>/g' "$STRING_FILE"
         fi
 
     - name: JDK 17 Kurulumu
@@ -53,12 +57,11 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon
         cd ..
-        # Çıkan APK dosyasını doğrudan istediğimiz isimle kopyalıyoruz
-        cp android/app/build/outputs/apk/debug/app-debug.apk Dijital-Esnaf-Defteri.apk
+        cp android/app/build/outputs/apk/debug/app-debug.apk Taksimetre-Hesaplayici.apk
 
     - name: APK Kaydet
       uses: actions/upload-artifact@v4
       with:
-        name: Dijital-Esnaf-Defteri
-        path: Dijital-Esnaf-Defteri.apk
+        name: Taksimetre-Hesaplayici
+        path: Taksimetre-Hesaplayici.apk
         

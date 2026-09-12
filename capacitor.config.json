@@ -1,0 +1,6 @@
+{
+  "appId": "com.esnaf.defteri",
+  "appName": "Dijital Esnaf Defteri",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

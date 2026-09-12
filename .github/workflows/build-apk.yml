@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Repoyu Kopyala
@@ -42,11 +42,14 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Android APK Derle (Debug - Önbellek Yenilemeli)
+    - name: Android APK Derle (Güvenli Mod)
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug --refresh-dependencies
+        # Bozuk inmiş olabilecek dosyaları temizle
+        rm -rf ~/.gradle/caches/
+        # Güvenli, tek çekirdekli ve daemonsuz derleme başlat
+        ./gradlew assembleDebug --no-daemon --max-workers=1
 
     - name: APK Dosyasını Kaydet ve İndirilebilir Yap
       uses: actions/upload-artifact@v4

@@ -17,11 +17,20 @@ jobs:
       with:
         node-version: 18
 
-    - name: Capacitor ve Cordova Altyapısını Hazırla
+    - name: Capacitor Projesini Manuel ve Hatasız Hazırla
       run: |
-        npm install -g @capacitor/cli @capacitor/core
-        npx @capacitor/cli init TaksiAsistan com.taksimetre.app --web-dir .
-        npm install @capacitor/android
+        # Capacitor paketlerini projeye kuralım
+        npm install @capacitor/core @capacitor/cli @capacitor/android
+
+        # capacitor.config.json dosyasını doğrudan kendimiz oluşturalım (Web dizini kök klasör '.')
+        echo '{
+          "appId": "com.taksimetre.app",
+          "appName": "TaksiAsistan",
+          "webDir": ".",
+          "bundledWebRuntime": false
+        }' > capacitor.config.json
+
+        # Android platformunu ekleyelim
         npx cap add android
 
     - name: Java (JDK 17) Kurulumu

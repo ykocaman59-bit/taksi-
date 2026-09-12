@@ -36,19 +36,20 @@ jobs:
         npx cap add android
         npx cap sync android
 
+        # Gradle sürümünü sorunsuz çalışan 8.5 sürümüne yükselt
+        cd android
+        ./gradlew wrapper --gradle-version 8.5
+
     - name: Java (JDK 17) Kurulumu
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Android APK Derle (Güvenli Mod)
+    - name: Android APK Derle (Kararlı Sürüm)
       run: |
         cd android
         chmod +x gradlew
-        # Bozuk inmiş olabilecek dosyaları temizle
-        rm -rf ~/.gradle/caches/
-        # Güvenli, tek çekirdekli ve daemonsuz derleme başlat
         ./gradlew assembleDebug --no-daemon --max-workers=1
 
     - name: APK Dosyasını Kaydet ve İndirilebilir Yap

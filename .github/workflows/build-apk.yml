@@ -19,18 +19,13 @@ jobs:
 
     - name: Dosya Yapısını Düzenle ve Capacitor'ı Hazırla
       run: |
-        # Garantili olması için www klasörünü betik içinde oluşturalım
         mkdir -p www
-        
-        # Eğer kök dizinde index.html varsa www içine taşıyalım (zaten www içindeyse hata vermez)
         if [ -f "index.html" ]; then
           cp index.html www/index.html
         fi
 
-        # Capacitor paketlerini kuralım
         npm install @capacitor/core @capacitor/cli @capacitor/android
 
-        # capacitor.config.json dosyasını oluşturalım
         echo '{
           "appId": "com.taksimetre.app",
           "appName": "TaksiAsistan",
@@ -38,7 +33,6 @@ jobs:
           "bundledWebRuntime": false
         }' > capacitor.config.json
 
-        # Android platformunu ekleyip senkronize edelim
         npx cap add android
         npx cap sync android
 
@@ -48,11 +42,11 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Android APK Derle (Debug)
+    - name: Android APK Derle (Debug - Önbellek Yenilemeli)
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --refresh-dependencies
 
     - name: APK Dosyasını Kaydet ve İndirilebilir Yap
       uses: actions/upload-artifact@v4

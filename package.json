@@ -1,7 +1,7 @@
 {
-  "name": "dijital-esnaf-defteri",
+  "name": "taksimetre-hesaplayici",
   "version": "1.0.0",
-  "description": "Dijital Esnaf Defteri",
+  "description": "Taksimetre Hesaplayıcı ve Asistanı",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

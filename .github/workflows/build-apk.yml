@@ -5,55 +5,51 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+    build:
+      runs-on: ubuntu-22.04
 
-    steps:
-    - name: Repoyu Kopyala
-      uses: actions/checkout@v4
+      steps:
+      - name: Repoyu Kopyala
+        uses: actions/checkout@v4
 
-    - name: Node.js Kurulumu
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+      - name: Node.js Kurulumu
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-    - name: Java (JDK 17) Kurulumu
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Java (JDK 17) Kurulumu
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Dosya Yapısını Düzenle ve Capacitor'ı Hazırla
-      run: |
-        mkdir -p www
-        if [ -f "index.html" ]; then
-          cp index.html www/index.html
-        fi
+      - name: Projeyi Hazırla ve Derle
+        run: |
+          mkdir -p www
+          if [ -f "index.html" ]; then
+            cp index.html www/index.html
+          fi
 
-        npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core @capacitor/cli @capacitor/android
 
-        echo '{
-          "appId": "com.taksimetre.app",
-          "appName": "TaksiAsistan",
-          "webDir": "www",
-          "bundledWebRuntime": false
-        }' > capacitor.config.json
+          echo '{
+            "appId": "com.taksimetre.app",
+            "appName": "TaksiAsistan",
+            "webDir": "www",
+            "bundledWebRuntime": false
+          }' > capacitor.config.json
 
-        npx cap add android
-        npx cap sync android
+          npx cap add android
+          npx cap sync android
 
-        cd android
-        ./gradlew wrapper --gradle-version 8.5
-
-    - name: Android APK Derle (Kararlı Sürüm)
-      run: |
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --max-workers=1
-
-    - name: APK Dosyasını Kaydet ve İndirilebilir Yap
-      uses: actions/upload-artifact@v4
-      with:
-        name: taksimetre-apk
-        path: android/app/build/outputs/apk/debug/app-debug.apk
-        
+          cd android
+          chmod +x gradlew
+          # Önbellek hatasını aşmak için bağımlılıkları zorla yenile
+          ./gradlew assembleDebug --refresh-dependencies --no-daemon
+          
+      - name: APK Dosyasını Kaydet ve İndirilebilir Yap
+        uses: actions/upload-artifact@v4
+        with:
+          name: taksimetre-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          

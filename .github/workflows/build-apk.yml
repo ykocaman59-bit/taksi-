@@ -17,6 +17,12 @@ jobs:
       with:
         node-version: 18
 
+    - name: Java (JDK 17) Kurulumu
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
     - name: Dosya Yapısını Düzenle ve Capacitor'ı Hazırla
       run: |
         mkdir -p www
@@ -36,15 +42,8 @@ jobs:
         npx cap add android
         npx cap sync android
 
-        # Gradle sürümünü sorunsuz çalışan 8.5 sürümüne yükselt
         cd android
         ./gradlew wrapper --gradle-version 8.5
-
-    - name: Java (JDK 17) Kurulumu
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
 
     - name: Android APK Derle (Kararlı Sürüm)
       run: |

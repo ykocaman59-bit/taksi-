@@ -17,12 +17,20 @@ jobs:
       with:
         node-version: 18
 
-    - name: Capacitor Projesini www Klasörü ile Hazırla
+    - name: Dosya Yapısını Düzenle ve Capacitor'ı Hazırla
       run: |
+        # Garantili olması için www klasörünü betik içinde oluşturalım
+        mkdir -p www
+        
+        # Eğer kök dizinde index.html varsa www içine taşıyalım (zaten www içindeyse hata vermez)
+        if [ -f "index.html" ]; then
+          cp index.html www/index.html
+        fi
+
         # Capacitor paketlerini kuralım
         npm install @capacitor/core @capacitor/cli @capacitor/android
 
-        # capacitor.config.json dosyasını www klasörünü hedefleyecek şekilde oluşturalım
+        # capacitor.config.json dosyasını oluşturalım
         echo '{
           "appId": "com.taksimetre.app",
           "appName": "TaksiAsistan",
@@ -30,10 +38,9 @@ jobs:
           "bundledWebRuntime": false
         }' > capacitor.config.json
 
-        # Android platformunu ekleyelim ve ayarları güncelleyelim (Eksik dosyaları tamamlar)
+        # Android platformunu ekleyip senkronize edelim
         npx cap add android
-        npx cap update android
-        npx cap copy android
+        npx cap sync android
 
     - name: Java (JDK 17) Kurulumu
       uses: actions/setup-java@v4

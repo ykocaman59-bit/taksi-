@@ -56,7 +56,7 @@
         </div>
 
         <h1>İSTANBUL TAKSİ</h1>
-        <div class="subtitle">Adil Hak Koruma Asistanı<br><span style="color:#666; font-size:10px;">(Yolcu ve Taksici Güvence Sistemi)</span></div>
+        <div class="subtitle">Adil Hak Koruma Asistanı<br><span style="color:#666; font-size:10px;">(Test Modu Aktif)</span></div>
         
         <div class="label">TOPLAM ÜCRET</div>
         <div class="screen" id="totalPrice">0.00 ₺</div>
@@ -64,7 +64,7 @@
         <div class="label">MESAFE</div>
         <div id="distance" style="font-size: 20px; margin: 10px 0;">0.00 km</div>
 
-        <div class="status-text" id="statusText">Konum bekleniyor...</div>
+        <div class="status-text" id="statusText">Test Modu Hazır (GPS Beklenmiyor)</div>
 
         <button id="toggleBtn" class="start" onclick="toggleMeter()">BAŞLAT</button>
     </div>
@@ -114,14 +114,12 @@
         let minFee = parseFloat(localStorage.getItem('minFee')) || 230.00;
 
         let isRunning = false;
-        let watchId = null;
+        let simulationInterval = null;
         let totalKm = 0;
-        let lastCoords = null;
         let tripStartTime = null;
         
-        let startCoordsData = null;
-        let startAddressText = "Adres alınıyor...";
-        let currentPositionCache = null;
+        let startAddressText = "İstanbul / Merkez (Test Konumu)";
+        let endAddressText = "İstanbul / Varmış (Test Konumu)";
 
         function openSettingsModal() {
             document.getElementById('inputOpening').value = openingFee;
@@ -148,85 +146,37 @@
         function closeHistoryModal() { document.getElementById('historyModal').style.display = "none"; }
         function closeDetailModal() { document.getElementById('detailModal').style.display = "none"; }
 
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; 
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        async function getAddressFromLatLon(lat, lon) {
-            try {
-                let response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
-                    headers: { 'Accept-Language': 'tr' }
-                });
-                let data = await response.json();
-                if (data && data.display_name) {
-                    let addr = data.address;
-                    let road = addr.road || addr.pedestrian || addr.suburb || "";
-                    let neighbourhood = addr.neighbourhood || addr.quarter || addr.village || "";
-                    let district = addr.city_district || addr.town || addr.county || "İstanbul";
-                    let city = addr.city || addr.province || "İstanbul";
-                    
-                    return `${neighbourhood} ${road}, ${district} / ${city}`.trim();
-                }
-                return "Konum Adresi Alındı";
-            } catch (e) {
-                return "Adres Bulunamadı (Çevrimdışı)";
-            }
-        }
-
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition((pos) => {
-                currentPositionCache = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-                if(!isRunning) document.getElementById('statusText').innerText = "Konum Hazır - Başlatabilirsiniz";
-            }, (err) => {
-                document.getElementById('statusText').innerText = "GPS Sinyali Bekleniyor...";
-            }, { enableHighAccuracy: true });
-        }
-
-        async function toggleMeter() {
+        function toggleMeter() {
             const btn = document.getElementById('toggleBtn');
             if (!isRunning) {
-                if (!currentPositionCache) {
-                    alert("GPS konumu henüz alınamadı! Lütfen açık alanda olduğunuzdan emin olun.");
-                    return;
-                }
-                
+                // BAŞLAT
                 isRunning = true;
                 btn.innerText = "YOLCULUĞU BİTİR";
                 btn.className = "";
                 totalKm = 0;
-                lastCoords = currentPositionCache;
-                startCoordsData = currentPositionCache;
                 tripStartTime = new Date();
                 
-                document.getElementById('statusText').innerText = "Başlangıç adresi çözülüyor...";
-                startAddressText = await getAddressFromLatLon(startCoordsData.lat, startCoordsData.lon);
-                document.getElementById('statusText').innerText = "Yolculuk Devam Ediyor...";
-
+                document.getElementById('statusText').innerText = "Test Sürüşü Aktif (Yol Alınıyor...)";
                 document.getElementById('totalPrice').innerText = openingFee.toFixed(2) + " ₺";
+                document.getElementById('distance').innerText = "0.00 km";
 
-                watchId = navigator.geolocation.watchPosition(successPosition, errorPosition, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 5000
-                });
+                // Her 1.5 saniyede bir mesafe ve ücreti sanal olarak artır
+                simulationInterval = setInterval(() => {
+                    totalKm += 0.15; // Her adımda ~150 metre ekle
+                    let calculatedPrice = openingFee + (totalKm * kmRate);
+                    let finalPrice = calculatedPrice < minFee ? minFee : calculatedPrice;
+
+                    document.getElementById('totalPrice').innerText = finalPrice.toFixed(2) + " ₺";
+                    document.getElementById('distance').innerText = totalKm.toFixed(2) + " km";
+                }, 1500);
+
             } else {
+                // BİTİR
                 isRunning = false;
-                navigator.geolocation.clearWatch(watchId);
+                clearInterval(simulationInterval);
                 btn.innerText = "BAŞLAT";
                 btn.className = "start";
-                document.getElementById('statusText').innerText = "Bitiş adresi çözülüyor...";
-
-                let endAddressText = "Bitiş Adresi Bilinmiyor";
-                if (lastCoords) {
-                    endAddressText = await getAddressFromLatLon(lastCoords.lat, lastCoords.lon);
-                }
+                document.getElementById('statusText').innerText = "Yolculuk Tamamlandı ve Kaydedildi!";
 
                 let calculatedPrice = openingFee + (totalKm * kmRate);
                 let finalPrice = calculatedPrice < minFee ? minFee : calculatedPrice;
@@ -248,31 +198,9 @@
                 history.unshift(tripData);
                 localStorage.setItem('tripHistory', JSON.stringify(history));
 
-                document.getElementById('statusText').innerText = "Yolculuk Kaydedildi!";
-                alert("Yolculuk başarıyla kaydedildi! Başlangıç ve bitiş adresleri rapora eklendi.");
+                alert("Yolculuk başarıyla kaydedildi! Geçmiş menüsünden inceleyebilirsin.");
             }
         }
-
-        function successPosition(position) {
-            const currentCoords = { lat: position.coords.latitude, lon: position.coords.longitude };
-            currentPositionCache = currentCoords;
-
-            if (lastCoords) {
-                const distance = calculateDistance(lastCoords.lat, lastCoords.lon, currentCoords.lat, currentCoords.lon);
-                if (distance > 0.002) {
-                    totalKm += distance;
-                    lastCoords = currentCoords;
-                }
-            } else {
-                lastCoords = currentCoords;
-            }
-            let calculatedPrice = openingFee + (totalKm * kmRate);
-            let finalPrice = calculatedPrice < minFee ? minFee : calculatedPrice;
-            document.getElementById('totalPrice').innerText = finalPrice.toFixed(2) + " ₺";
-            document.getElementById('distance').innerText = totalKm.toFixed(2) + " km";
-        }
-
-        function errorPosition(error) { console.error("Konum hatası: " + error.message); }
 
         function renderHistoryList() {
             const listContainer = document.getElementById('historyList');
@@ -290,8 +218,8 @@
                 item.innerHTML = `
                     <div class="history-date">${trip.dateFormatted} (${trip.timeRange})</div>
                     <div class="history-details">
-                        📍 <b>Kalkış:</b> ${trip.startAddress.substring(0, 30)}...<br>
-                        🏁 <b>Varış:</b> ${trip.endAddress.substring(0, 30)}...<br>
+                        📍 <b>Kalkış:</b> ${trip.startAddress}<br>
+                        🏁 <b>Varış:</b> ${trip.endAddress}<br>
                         💰 <b>Tutar:</b> <span style="color:#2ecc71;">${trip.totalAmount} ₺</span> (${trip.distance} km)
                     </div>
                 `;
@@ -309,7 +237,7 @@
                 <p style="color:#f1c40f;"><b>Başlangıç Noktası:</b><br>${trip.startAddress}</p>
                 <p style="color:#e74c3c;"><b>Bitiş Noktası:</b><br>${trip.endAddress}</p>
                 <hr style="border-color:#444;">
-                <p><b>O Anki İndi-Bindi:</b> ${trip.minFeeUsed} ₺ | <b>Açılış:</b> ${trip.openingUsed} ₺ | <b>KM:</b> ${trip.kmRateUsed} ₺</p>
+                <p><b>İndi-Bindi:</b> ${trip.minFeeUsed} ₺ | <b>Açılış:</b> ${trip.openingUsed} ₺ | <b>KM:</b> ${trip.kmRateUsed} ₺</p>
                 <p><b>Gidilen Mesafe:</b> <span style="color:#f1c40f; font-weight:bold;">${trip.distance} km</span></p>
                 <p><b>Hesaplanan Tutar:</b> <span style="color:#2ecc71; font-weight:bold; font-size:15px;">${trip.totalAmount} ₺</span></p>
             `;

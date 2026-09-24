@@ -37,7 +37,7 @@ jobs:
 
 
         # ---------------------------------------------------------
-        # ANDROID MANIFEST (Konum İzinleri Eklendi)
+        # ANDROID MANIFEST
         # ---------------------------------------------------------
 
         cat << 'EOF' > app/src/main/AndroidManifest.xml
@@ -46,8 +46,6 @@ jobs:
 
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-            
-            <!-- Konum İzinleri (GPS Kilometre Artışı İçin Şart) -->
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
@@ -118,8 +116,8 @@ jobs:
         import android.os.Bundle;
         import android.os.Handler;
         import android.os.Looper;
+        import android.view.Gravity;
         import android.view.animation.AlphaAnimation;
-        import android.view.animation.Animation;
         import android.widget.ImageView;
         import android.widget.LinearLayout;
         import android.graphics.Color;
@@ -142,23 +140,23 @@ jobs:
 
                 LinearLayout layout = new LinearLayout(this);
                 layout.setOrientation(LinearLayout.VERTICAL);
-                layout.setGravity(android.view.Gravity.CENTER);
-                layout.setBackgroundColor(Color.parseColor("#FFFFFF"));
+                layout.setGravity(Gravity.CENTER);
+                layout.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.MATCH_PARENT
+                ));
+                layout.setBackgroundColor(Color.parseColor("#121212")); // Logonun arka planına uyumlu koyu ton
 
                 ImageView logoView = new ImageView(this);
                 logoView.setImageResource(R.mipmap.ic_launcher);
 
-                LinearLayout.LayoutParams params =
-                        new LinearLayout.LayoutParams(300, 300);
-
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(400, 400);
                 logoView.setLayoutParams(params);
                 layout.addView(logoView);
 
                 setContentView(layout);
 
-                Animation fadeIn =
-                        new AlphaAnimation(0.0f, 1.0f);
-
+                AlphaAnimation fadeIn = new AlphaAnimation(0.0f, 1.0f);
                 fadeIn.setDuration(1000);
                 logoView.startAnimation(fadeIn);
 
@@ -229,7 +227,7 @@ jobs:
 
 
         # ---------------------------------------------------------
-        # MAIN ACTIVITY (WebView Geolocation Tam Destek)
+        # MAIN ACTIVITY
         # ---------------------------------------------------------
 
         cat << 'EOF' > app/src/main/java/com/github/ykocaman59bit/taksimetre/MainActivity.java
@@ -275,7 +273,7 @@ jobs:
                 webSettings.setMediaPlaybackRequiresUserGesture(false);
                 webSettings.setAllowFileAccess(true);
                 webSettings.setAllowContentAccess(true);
-                webSettings.setGeolocationEnabled(true); // GPS Konum Desteği Aktif
+                webSettings.setGeolocationEnabled(true);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
@@ -301,7 +299,7 @@ jobs:
                 webView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                        callback.invoke(origin, true, false); // Web sitesinin konum istemesine otomatik onay ver
+                        callback.invoke(origin, true, false);
                     }
 
                     @Override
@@ -458,14 +456,20 @@ jobs:
 
 
         # ---------------------------------------------------------
-        # VARSAYILAN LOGO OLUŞTURMA
+        # GERÇEK REPO LOGOSUNU KULLANMA (ASSETS İÇİNDEKİ icon.png)
         # ---------------------------------------------------------
-        if [ ! -f icon.svg ]; then
-          echo '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" fill="#1e293b"/><text x="50%" y="50%" font-size="60" fill="#ffffff" text-anchor="middle" dominant-baseline="central">T</text></svg>' > icon.svg
+        # Eğer logon assets klasöründeyse oradan, ana dizindeyse ana dizinden alır
+        if [ -f assets/icon.png ]; then
+          cp assets/icon.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+        elif [ -f icon.png ]; then
+          cp icon.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+        else
+          # Bulamazsa varsayılan bir renkli placeholder atar ama T harfi basmaz
+          echo '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" fill="#121212"/></svg>' > fallback.svg
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin
+          rsvg-convert -w 192 -h 192 fallback.svg -o app/src/main/res/mipmap-hdpi/ic_launcher.png
         fi
 
-        sudo apt-get update && sudo apt-get install -y librsvg2-bin
-        rsvg-convert -w 192 -h 192 icon.svg -o app/src/main/res/mipmap-hdpi/ic_launcher.png
         cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
 
 
@@ -482,4 +486,3 @@ jobs:
         path: app/build/outputs/apk/debug/TaksimetreHesaplayici.apk
         if-no-files-found: error
         retention-days: 1
-        

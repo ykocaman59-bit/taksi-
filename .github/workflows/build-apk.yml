@@ -52,10 +52,7 @@ jobs:
             content = f.read()
 
         perms = """
-            <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
             <uses-permission android:name="android.permission.CAMERA" />
             <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -80,8 +77,13 @@ jobs:
             ma_path = matches[0]
             with open(ma_path, "r", encoding="utf-8") as f:
                 ma_content = f.read()
+            
             if "requestPermissions" not in ma_content:
-                code = "\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {\n            String[] permsList = {android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.ACTIVITY_RECOGNITION, android.Manifest.permission.POST_NOTIFICATIONS};\n            requestPermissions(permsList, 101);\n        }\n    }\n"
+                # Gerekli kütüphane importlarını ve onCreate metodunu ekliyoruz
+                import_statement = "import android.os.Bundle;\nimport android.Manifest;\nimport android.content.pm.PackageManager;\nimport androidx.core.app.ActivityCompat;\nimport androidx.core.content.ContextCompat;\n\npublic class MainActivity"
+                ma_content = ma_content.replace("public class MainActivity", import_statement)
+                
+                code = "\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {\n            String[] permsList = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.ACTIVITY_RECOGNITION, Manifest.permission.POST_NOTIFICATIONS};\n            requestPermissions(permsList, 101);\n        }\n    }\n"
                 if "public class MainActivity extends BridgeActivity {" in ma_content:
                     ma_content = ma_content.replace("public class MainActivity extends BridgeActivity {", "public class MainActivity extends BridgeActivity {" + code)
                     with open(ma_path, "w", encoding="utf-8") as f:

@@ -45,30 +45,36 @@ jobs:
           sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Taksimetre Hesaplayici<\/string>/g' "$STRING_FILE"
         fi
 
-        MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-        if [ -f "$MANIFEST_FILE" ]; then
-          # Manifest içerisindeki <application tag'inin hemen önüne tüm izinleri ekliyoruz
-          # Böylece uygulama bilgisinde ve ayarlarda tüm izinler eksiksiz görünür
-          PERMISSIONS='
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-              <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-              <uses-permission android:name="android.permission.CAMERA" />
-              <uses-permission android:name="android.permission.RECORD_AUDIO" />
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-              <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-              <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-              <uses-permission android:name="android.permission.READ_CONTACTS" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-              <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
-          '
-          sed -i "s|<application|$PERMISSIONS\n    <application|" "$MANIFEST_FILE"
-        fi
+        # Python kullanarak Manifest dosyasına izinleri güvenli bir şekilde ekliyoruz
+        python3 -c '
+        manifest_path = "android/app/src/main/AndroidManifest.xml"
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        permissions = """
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+            <uses-permission android:name="android.permission.CAMERA" />
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+            <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+            <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+            <uses-permission android:name="android.permission.READ_CONTACTS" />
+            <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+            <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+            <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+        """
+
+        if "<application" in content and "uses-permission" not in content:
+            content = content.replace("<application", permissions + "\n    <application")
+            with open(manifest_path, "w", encoding="utf-8") as f:
+                f.write(content)
+        '
 
     - name: JDK 17 Kurulumu
       uses: actions/setup-java@v3

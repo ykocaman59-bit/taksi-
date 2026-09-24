@@ -45,7 +45,7 @@ jobs:
           sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Taksimetre Hesaplayici<\/string>/g' "$STRING_FILE"
         fi
 
-        # İzinleri sync işleminden SONRA ekliyoruz ki kesinlikle silinmesin ve ayarlarda görünsün
+        # Python ile Manifest dosyasına eksiksiz tüm izinleri ekliyoruz
         python3 -c '
         manifest_path = "android/app/src/main/AndroidManifest.xml"
         with open(manifest_path, "r", encoding="utf-8") as f:
@@ -70,15 +70,15 @@ jobs:
             <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
         """
 
-        if "<application" in content and "uses-permission" not in content:
-            content = content.replace("<application", permissions + "\n    <application")
-            with open(manifest_path, "w", encoding="utf-8") as f:
-                f.write(content)
+        if "<application" in content:
+            # Eğer daha önce eklenmediyse <application taginden hemen önce izinleri yerleştiriyoruz
+            if "ACCESS_BACKGROUND_LOCATION" not in content:
+                content = content.replace("<application", permissions + "\n    <application")
+                with open(manifest_path, "w", encoding="utf-8") as f:
+                    f.write(content)
         '
 
-        # Uygulama ilk açıldığında izinlerin sorulması için MainActivity dosyasına otomatik izin isteme kodu enjekte ediyoruz
-        main_activity_path = "android/app/src/main/java/com/getcapacitor/myapp/MainActivity.java"
-        # Alternatif yollar için dosya bulma
+        # Uygulama ilk açıldığında izinlerin sorulması için MainActivity dosyasına otomatik kod ekliyoruz
         import glob
         matches = glob.glob("android/app/src/main/java/**/MainActivity.java", recursive=True)
         if matches:
@@ -86,26 +86,26 @@ jobs:
             with open(main_activity_path, "r", encoding="utf-8") as f:
                 ma_content = f.read()
             
-            # Eğer onCreate içine izin isteme mekanizması eklenmediyse ekleyelim
-            if "ActivityCompat.requestPermissions" not in ma_content:
+            if "ActivityCompat.requestPermissions" not in ma_content and "requestPermissions" not in ma_content:
                 permission_code = """
-                @Override
-                protected void onCreate(Bundle savedInstanceState) {
-                    super.onCreate(savedInstanceState);
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                        String[] permissions = {
-                            android.Manifest.permission.ACCESS_FINE_LOCATION,
-                            android.Manifest.permission.CAMERA,
-                            android.Manifest.permission.RECORD_AUDIO,
-                            android.Manifest.permission.READ_CONTACTS
-                        };
-                        requestPermissions(permissions, 101);
-                    }
-                }
-                """
-                # Mevcut class'ın içine onCreate metodunu yerleştiriyoruz
-                if "public class MainActivity" in ma_content:
-                    ma_content = ma_content.replace("public class MainActivity extends BridgeActivity {", "public class MainActivity extends BridgeActivity {\n" + permission_code)
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            String[] permissions = {
+                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                android.Manifest.permission.CAMERA,
+                android.Manifest.permission.RECORD_AUDIO,
+                android.Manifest.permission.READ_CONTACTS,
+                android.Manifest.permission.ACTIVITY_RECOGNITION,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            };
+            requestPermissions(permissions, 101);
+        }
+    }
+"""
+                if "public class MainActivity extends BridgeActivity {" in ma_content:
+                    ma_content = ma_content.replace("public class MainActivity extends BridgeActivity {", "public class MainActivity extends BridgeActivity {" + permission_code)
                     with open(main_activity_path, "w", encoding="utf-8") as f:
                         f.write(ma_content)
         '

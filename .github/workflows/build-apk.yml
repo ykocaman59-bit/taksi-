@@ -45,13 +45,13 @@ jobs:
           sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Taksimetre Hesaplayici<\/string>/g' "$STRING_FILE"
         fi
 
-        # Python ile Manifest dosyasına eksiksiz tüm izinleri ekliyoruz
         python3 -c '
+        import glob
         manifest_path = "android/app/src/main/AndroidManifest.xml"
         with open(manifest_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        permissions = """
+        perms = """
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -70,43 +70,21 @@ jobs:
             <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
         """
 
-        if "<application" in content:
-            # Eğer daha önce eklenmediyse <application taginden hemen önce izinleri yerleştiriyoruz
-            if "ACCESS_BACKGROUND_LOCATION" not in content:
-                content = content.replace("<application", permissions + "\n    <application")
-                with open(manifest_path, "w", encoding="utf-8") as f:
-                    f.write(content)
-        '
+        if "<application" in content and "ACCESS_BACKGROUND_LOCATION" not in content:
+            content = content.replace("<application", perms + "\n    <application")
+            with open(manifest_path, "w", encoding="utf-8") as f:
+                f.write(content)
 
-        # Uygulama ilk açıldığında izinlerin sorulması için MainActivity dosyasına otomatik kod ekliyoruz
-        import glob
         matches = glob.glob("android/app/src/main/java/**/MainActivity.java", recursive=True)
         if matches:
-            main_activity_path = matches[0]
-            with open(main_activity_path, "r", encoding="utf-8") as f:
+            ma_path = matches[0]
+            with open(ma_path, "r", encoding="utf-8") as f:
                 ma_content = f.read()
-            
-            if "ActivityCompat.requestPermissions" not in ma_content and "requestPermissions" not in ma_content:
-                permission_code = """
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            String[] permissions = {
-                android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.CAMERA,
-                android.Manifest.permission.RECORD_AUDIO,
-                android.Manifest.permission.READ_CONTACTS,
-                android.Manifest.permission.ACTIVITY_RECOGNITION,
-                android.Manifest.permission.POST_NOTIFICATIONS
-            };
-            requestPermissions(permissions, 101);
-        }
-    }
-"""
+            if "requestPermissions" not in ma_content:
+                code = "\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {\n            String[] permsList = {android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.ACTIVITY_RECOGNITION, android.Manifest.permission.POST_NOTIFICATIONS};\n            requestPermissions(permsList, 101);\n        }\n    }\n"
                 if "public class MainActivity extends BridgeActivity {" in ma_content:
-                    ma_content = ma_content.replace("public class MainActivity extends BridgeActivity {", "public class MainActivity extends BridgeActivity {" + permission_code)
-                    with open(main_activity_path, "w", encoding="utf-8") as f:
+                    ma_content = ma_content.replace("public class MainActivity extends BridgeActivity {", "public class MainActivity extends BridgeActivity {" + code)
+                    with open(ma_path, "w", encoding="utf-8") as f:
                         f.write(ma_content)
         '
 
